@@ -1,0 +1,66 @@
+---
+title: "Argentina's Provinces Population"
+author: "Deris Spina"
+date: "17/01/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(rvest)
+library(leaflet)
+library(dplyr)
+library(stringr)
+```
+
+```{r, include=FALSE}
+#Extract table from wikipedia
+url = "https://es.wikipedia.org/wiki/Demograf%C3%ADa_de_Argentina"
+population <- url %>%
+  html() %>%
+  html_nodes(xpath='//*[@id="mw-content-text"]/div/table[1]') %>%
+  html_table()
+#Process the data
+population = population[[1]]
+names(population)[2] = "Poblacion2010"
+population = data.frame(population)
+
+
+#population$Poblacion2010 =  str_replace_all(population$Poblacion2010,"\\.","")
+#population$Poblacion2010 = as.numeric(population$Poblacion2010)
+#Latitud and longitude for each province
+lat = c(-36.157222,-32, -33.722778,-34.599722,-32.883333 ,-27 , -32.0477,-24.783333, -26.92,-27.451389,-28.66,-27.783333,-30.87 ,-23.75,-40.8, -38.951667 ,-26.183333 ,-43.3,-33.3 ,-28.466667,-29.433333,-36.616667,-48.823889,-54.362)
+lng = c(-60.569722,-64, -62.246111,-58.381944,-68.833333 ,-65.5,-60.281 ,-65.416667, -54.52,-58.986667,-57.63 ,-64.266667,-68.98,-65.5,-63 ,-68.074444, -58.175,-65.1  , -66.35,-65.783333,-66.85,-64.283333,-69.815,-67.638 )
+#Add latitud and longitud to the data frame
+population = population %>% mutate( pop2010 = Poblacion2010,
+                                    Poblacion2010 = as.numeric(str_replace_all(population$Poblacion2010,"\\.","")),
+                                    lat = lat,
+                                    lng=lng)
+population
+#Create factor variables quantile and colors depending on the population size.
+qnt = quantile(population$Poblacion2010)
+colors = c("blue","green","yellow","red")
+population = population %>% mutate(quantile = cut(population$Poblacion2010,unique(qnt),include.lowest=TRUE),
+                                   colors = cut(population$Poblacion2010,unique(qnt),include.lowest=TRUE))
+levels(population$quantile) = c("low","medium","high","extremely high") #rename quantiles
+levels(population$colors) =  colors #Set colors names
+
+```
+
+
+```{r, echo= FALSE}
+legend_vals = floor(qnt[1:4]) #get the quantiles to use as legend labels
+legend_vals = paste("  ",legend_vals)
+legend_vals = str_sub(legend_vals,-7,-1) #format the legend numbers to display adequately.
+legend_vals = sprintf(">=%s hab.",legend_vals) #add >= sign and units.
+population %>%
+    leaflet()%>%
+    addTiles()%>%
+    addCircles(radius = sqrt(population$Poblacion2010)*50,
+               color=population$colors, popup = paste0(population$Provincia," ",population$pop2010," hab."))%>%
+    addLegend(labels = legend_vals, colors =colors )
+
+```
