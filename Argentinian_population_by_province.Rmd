@@ -51,7 +51,7 @@ levels(population$colors) =  colors #Set colors names
 ```
 
 
-```{r, echo= FALSE}
+```{r, echo= FALSE,message=FALSE, warning=FALSE}
 legend_vals = floor(qnt[1:4]) #get the quantiles to use as legend labels
 legend_vals = paste("  ",legend_vals)
 legend_vals = str_sub(legend_vals,-7,-1) #format the legend numbers to display adequately.
